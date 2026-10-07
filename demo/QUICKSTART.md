@@ -74,11 +74,13 @@ exfiltration chain today? Chart threats per rule."*
 
 ## 4. If nothing shows up
 
-- **No rows / empty panels:** the session is almost certainly tagged `dss-demo-dev`, not `dss-demo`.
-  Launch the demo only with `./demo/run-demo.sh` (it prints `deployment=dss-demo`); a plain `claude`
-  session in this repo is `dss-demo-dev`. Either relaunch via the script, or set the dashboard's
-  Deployment selector to `dss-demo-dev` to see what you already ran. If still nothing, run
-  `./demo/setup.sh --verify` to confirm events are reaching the stack at all.
+- **No rows / empty panels:** two common causes.
+  1. **Wrong tag.** The session is tagged `dss-demo-dev`, not `dss-demo`. Launch the demo only with
+     `./demo/run-demo.sh` (it prints `deployment=dss-demo`); a plain `claude` session in this repo is
+     `dss-demo-dev`. Relaunch via the script, or set the dashboard's Deployment selector to `dss-demo-dev`.
+  2. **Stale window.** The panels and the `seek_to = '-15m'` query only show the last 15 minutes. If the
+     last session ran longer ago than that, the window is empty — generate fresh traffic and query within
+     15 minutes. Confirm events reach the stack at all with `./demo/setup.sh --verify`.
 - **demo-004 never fires:** the burst prompt must forbid batching (see the Burst row). It also lags ~1
   minute, since it fires when the per-minute window closes.
 - **Rows appear but no threats:** confirm Deployment = `dss-demo` on the dashboard and that the four
