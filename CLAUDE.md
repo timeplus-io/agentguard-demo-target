@@ -94,6 +94,13 @@ the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATER
   Multi-series lines need long format (`series` column + `config.color = 'series'`), not several `yAxis`
   columns. Variables substitute raw (`{{filter_time_range}}` → `15m`; quote string ones). A streaming
   table panel backfills with `SETTINGS seek_to = '-15m'`.
+- **Streaming vs historical panels.** A panel is streaming (pushes live updates, no manual refresh) when
+  its SQL queries the stream directly (no `table(...)`) and backfills with `SETTINGS seek_to = '-<range>'`;
+  it is historical (snapshot) when it wraps the source in `table(...)` with a `now()` window. The demo
+  needs the detection panels live, so the KPI tiles, threats-over-time (streaming `tumble`), attack-chain,
+  open-threats-by-severity and recent-threats panels all stream. Panels that cannot stream stay historical:
+  window functions (`avg() OVER` in the baseline panel) and JOINs (the sessions table). `build_dashboard.py`
+  validates streaming panels via `/sqlanalyze` (`is_streaming` must be true) and historical ones via `/exec`.
 - The app regenerates its dashboard on upgrade: after any AgentGuard app upgrade, re-run
   `python3 demo/build_dashboard.py` (it validates every panel through `/exec` or `/sqlanalyze` and then
   `PUT`s; pass `--dry` to validate only). Verify in the Console with Playwright at 1920 px, zero console errors.
