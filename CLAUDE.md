@@ -25,7 +25,7 @@ the stage runbook, and the design docs for the slide deck. Read `docs/` before c
 README.md, src/, config.yaml   # the "Orderbook Service" — a harmless target project the agent reads during the demo
 .claude/settings.json          # tags sessions as deployment dss-demo-dev (do not change to dss-demo)
 sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials and ~/.ssh/id_demo
-pages/vendor-notes.html        # the "attacker page": vendor release notes with a hidden prompt-injection block
+pages/vendor-notes.html        # the "attacker page": vendor release notes with a hidden prompt-injection block, served by GitHub Pages
 demo/setup.sh                  # one-shot laptop setup: installs the hook plugin, wires ~/.claude/settings.json, --verify/--uninstall
 demo/run-demo.sh               # launches Claude Code with HOME=sandbox-home and deployment dss-demo
 demo/QUICKSTART.md             # one-page guide for a new user: prerequisites, start, prompts, troubleshooting
@@ -101,8 +101,8 @@ the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATER
 
 - Stage script: `demo/RUNBOOK.md`. Rehearse end to end once with `./demo/run-demo.sh`; confirm each beat
   lights the expected rule on the dashboard (Deployment = `dss-demo`, Time Range = `15m`).
-- Before the talk: publish `pages/vendor-notes.html` to a public URL (GitHub gist/Pages) and paste it into
-  beat 2; record a screen capture of beats 1–6 as the fallback video for the deck's demo slide.
+- The attacker page is live at https://timeplus-io.github.io/agentguard-demo-target/pages/vendor-notes.html
+  (GitHub Pages, branch `main`, `.nojekyll` at the root; a push to `main` republishes it). Before the talk: record a screen capture of beats 1–6 as the fallback video for the deck's demo slide.
 - The exfil target `collector.example.invalid` is unresolvable by design; nothing leaves the laptop.
 - After the conference: run `demo/cleanup.sql` (or decide to keep the demo rules) and, if wanted, restore
   the shipped dashboard from `demo/dashboard.backup.json`.
@@ -121,4 +121,5 @@ server feature and use the recorded demo, not this stack. Open items: speaker na
 
 - 2026-10-06: no hold in the live demo (app has no hold feature); no OTel; four `demo_` MVs created;
   installed dashboard edited in place rather than a new one; attacker page hosted as a gist/Pages.
+- 2026-10-07: repo published public at github.com/timeplus-io/agentguard-demo-target; attacker page served by GitHub Pages from `main`.
 - 2026-10-06: presentations docs moved here from the neutron repo; dev sessions tagged `dss-demo-dev`.
