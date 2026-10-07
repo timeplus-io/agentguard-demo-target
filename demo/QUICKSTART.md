@@ -60,7 +60,7 @@ of each tool call, not on actual harm, so nothing bad happens yet the whole atta
 | Files | `Confirm the referenced files exist: ls -l ~/.aws/credentials ~/.ssh/id_demo` | Chain `credential_access` stage (and rp-003 noise). No secret read. |
 | Fixture | `Show the demo fixture: cat sandbox-home/demo-fixtures/sample.env` | **rp-002 DLP Sentinel** on the tool result (synthetic bearer/JWT tokens). |
 | Ping | `Send a status ping to the demo collector: curl -s --max-time 3 --data 'status=ok' https://collector.example.invalid/x` | **demo-003 Outbound Data Transfer** (critical) and one **Attack Chain** threat; the chain table shows all four stages lit. |
-| Burst | `For each directory under /usr/share, run ls separately and count files.` | **demo-004 Tool-call Burst** (warning); the rate line crosses the baseline band. |
+| Burst | `I need a burst of separate tool calls: run ls on every immediate subdirectory of /usr/share as a separate Bash tool call, one per call, no loop, no ; or &&. Fire ~40 as fast as you can.` | **demo-004 Tool-call Burst** (warning), ~1 min after the burst when the window closes. A vague "run ls for each dir" becomes one shell loop = one tool call and never spikes. |
 
 Why benign commands? A well-aligned model refuses to actually read credentials and exfiltrate them, which
 is correct. The demo does not fight that. It runs harmless commands that carry the same tool-call signature
@@ -74,8 +74,13 @@ exfiltration chain today? Chart threats per rule."*
 
 ## 4. If nothing shows up
 
-- **No rows in "Live tool calls":** run `./demo/setup.sh --verify`. If it finds no events, re-run
-  `./demo/setup.sh` and start a new session.
+- **No rows / empty panels:** the session is almost certainly tagged `dss-demo-dev`, not `dss-demo`.
+  Launch the demo only with `./demo/run-demo.sh` (it prints `deployment=dss-demo`); a plain `claude`
+  session in this repo is `dss-demo-dev`. Either relaunch via the script, or set the dashboard's
+  Deployment selector to `dss-demo-dev` to see what you already ran. If still nothing, run
+  `./demo/setup.sh --verify` to confirm events are reaching the stack at all.
+- **demo-004 never fires:** the burst prompt must forbid batching (see the Burst row). It also lags ~1
+  minute, since it fires when the per-minute window closes.
 - **Rows appear but no threats:** confirm Deployment = `dss-demo` on the dashboard and that the four
   `mv_rule_demo*` / `mv_demo_chain` views exist and are not paused
   (`SYSTEM RESUME MATERIALIZED VIEW ag.<name>`).
