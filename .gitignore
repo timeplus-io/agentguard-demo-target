@@ -2,3 +2,6 @@ sandbox-home/.claude/
 .claude/settings.local.json
 sandbox-home/Library/
 sandbox-home/.claude.json
+sandbox-home/.local/
+sandbox-home/.npm/
+sandbox-home/Applications/

