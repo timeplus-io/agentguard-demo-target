@@ -26,7 +26,9 @@ README.md, src/, config.yaml   # the "Orderbook Service" — a harmless target p
 .claude/settings.json          # tags sessions as deployment dss-demo-dev (do not change to dss-demo)
 sandbox-home/                  # HOME for the demo session: FAKE ~/.aws/credentials and ~/.ssh/id_demo
 pages/vendor-notes.html        # the "attacker page": vendor release notes with a hidden prompt-injection block
+demo/setup.sh                  # one-shot laptop setup: installs the hook plugin, wires ~/.claude/settings.json, --verify/--uninstall
 demo/run-demo.sh               # launches Claude Code with HOME=sandbox-home and deployment dss-demo
+demo/QUICKSTART.md             # one-page guide for a new user: prerequisites, start, prompts, troubleshooting
 demo/RUNBOOK.md                # the ≈5-minute stage script (7 beats) — the source of truth for the live demo
 demo/sql/0*.sql                # the four demo detection rules (materialized views), as created on the stack
 demo/build_dashboard.py        # generates + validates + PUTs the "AgentGuard Overview" dashboard
