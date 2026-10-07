@@ -40,8 +40,9 @@ def sv_cfg(value, color, unit=""):
 def tbl_cfg(): return {"chartType":"table","config":{"columns":[],"pageSize":20}}
 def pos(x,y,w,h): return {"x":x,"y":y,"w":w,"h":h,"nextX":x+w,"nextY":y+h}
 DEP="'{{filter_deployment}}'"; TR="{{filter_time_range}}"
-# Streaming panels query the stream directly (no table()) and backfill with seek_to, so they push live
-# updates to the Console without a manual refresh. Historical panels keep table() + now() windows.
+# Only four panels stream (query the stream directly, backfill with seek_to): Open critical threats,
+# Live tool calls, Attack chain by session and Recent threats. Every other panel is a historical snapshot
+# (table() + now() window): too many concurrent streaming queries blocked the Console page.
 SEEK=" SETTINGS seek_to = '-{{filter_time_range}}'"
 P=[]
 def add(id,title,desc,p,viz_type,content,cfg): P.append({"id":id,"title":title,"description":desc,"position":p,"viz_type":viz_type,"viz_content":content,"viz_config":cfg})
@@ -49,20 +50,20 @@ def add(id,title,desc,p,viz_type,content,cfg): P.append({"id":id,"title":title,"
 # Row 0 — controls
 add("ag-ctl-time","Time Range","",pos(0,0,6,1),"control","",{"chartType":"selector","target":"filter_time_range","defaultValue":"15m","inlineValues":"5m,15m,1h,6h,24h","label":"Time Range","labelWidth":35})
 add("ag-ctl-deployment","Deployment","",pos(6,0,6,1),"control","",{"chartType":"selector","target":"filter_deployment","defaultValue":"dss-demo","inlineValues":"dss-demo,dss-demo-dev,local","label":"Deployment","labelWidth":35})
-# Row 1 — KPIs (streaming: tick live as events and threats arrive)
-add("ag-kpi-sessions","Active sessions (window)","Distinct sessions with any event in the selected window. Streaming.",pos(0,1,3,2),"chart",
-    f"SELECT count_distinct(session_id) AS sessions FROM ag.agentguard_cim_event WHERE deployment_id = {DEP}{SEEK}", sv_cfg("sessions","#8934D9"))
-add("ag-kpi-toolcalls","Tool calls (window)","tool_invoke events in the selected window. Streaming.",pos(3,1,3,2),"chart",
-    f"SELECT count() AS tool_calls FROM ag.agentguard_cim_event WHERE event_type = 'tool_invoke' AND deployment_id = {DEP}{SEEK}", sv_cfg("tool_calls","#D53F8C"))
+# Row 1 — KPIs (only the critical-threat tile streams)
+add("ag-kpi-sessions","Active sessions (window)","Distinct sessions with any event in the selected window.",pos(0,1,3,2),"chart",
+    f"SELECT count_distinct(session_id) AS sessions FROM table(ag.agentguard_cim_event) WHERE event_time > now() - {TR} AND deployment_id = {DEP}", sv_cfg("sessions","#8934D9"))
+add("ag-kpi-toolcalls","Tool calls (window)","tool_invoke events in the selected window.",pos(3,1,3,2),"chart",
+    f"SELECT count() AS tool_calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {TR} AND deployment_id = {DEP}", sv_cfg("tool_calls","#D53F8C"))
 add("ag-kpi-critical","Open critical threats","Critical threat rows not acknowledged or cleared. Streaming — turns red the instant a rule fires.",pos(6,1,3,2),"chart",
     f"SELECT count() AS critical FROM ag.agentguard_threats WHERE severity = 'critical' AND (status = '' OR status = 'open') AND deployment_id = {DEP}{SEEK}", sv_cfg("critical","#D12D50"))
-add("ag-kpi-warning","Open warnings","Warning threat rows not acknowledged or cleared. Streaming.",pos(9,1,3,2),"chart",
-    f"SELECT count() AS warnings FROM ag.agentguard_threats WHERE severity = 'warning' AND (status = '' OR status = 'open') AND deployment_id = {DEP}{SEEK}", sv_cfg("warnings","#F0BE3E"))
-# Row 2 — live tool calls (streaming) + threats over time
+add("ag-kpi-warning","Open warnings","Warning threat rows not acknowledged or cleared.",pos(9,1,3,2),"chart",
+    f"SELECT count() AS warnings FROM table(ag.agentguard_threats) WHERE severity = 'warning' AND (status = '' OR status = 'open') AND last_seen > now() - {TR} AND deployment_id = {DEP}", sv_cfg("warnings","#F0BE3E"))
+# Row 2 — live tool calls (streaming) + threats over time (historical)
 add("ag-live-toolcalls","Live tool calls","Streaming: every tool the agent invokes, as it happens.",pos(0,3,6,5),"chart",
     f"SELECT event_time, tool_name, substring(tool_input, 1, 120) AS input FROM ag.agentguard_cim_event WHERE event_type = 'tool_invoke' AND deployment_id = {DEP} SETTINGS seek_to = '-15m'", tbl_cfg())
-add("ag-threats-over-time","Threats over time by rule","Security events per minute, stacked by rule. Streaming — new bars appear as rules fire.",pos(6,3,6,5),"chart",
-    f"SELECT window_start AS time, rule_name, count() AS events FROM tumble(ag.agentguard_security_events, detected_at, 1m) WHERE deployment_id = {DEP} GROUP BY window_start, rule_name{SEEK}", ts_cfg("column","time",["events"],color="rule_name",stacked=True))
+add("ag-threats-over-time","Threats over time by rule","Security events per minute, stacked by rule.",pos(6,3,6,5),"chart",
+    f"SELECT window_start AS time, rule_name, count() AS events FROM tumble(table(ag.agentguard_security_events), detected_at, 1m) WHERE detected_at > now() - {TR} AND deployment_id = {DEP} GROUP BY window_start, rule_name ORDER BY time", ts_cfg("column","time",["events"],color="rule_name",stacked=True))
 # Row 3 — chain status + baseline
 CHAIN=("WITH staged AS (SELECT event_time, session_id, agent_id, multi_if("
  "event_type = 'tool_complete' AND tool_name IN ('WebFetch','WebSearch'), 'probe', "
@@ -85,8 +86,8 @@ add("ag-events-per-minute","Events per minute by agent type","Normalized CIM eve
 add("ag-top-tools","Top tools","Most invoked tools in the selected time range.",pos(7,12,5,4),"chart",
     f"SELECT tool_name, count() AS calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {TR} AND deployment_id = {DEP} GROUP BY tool_name ORDER BY calls DESC LIMIT 10", ts_cfg("bar","tool_name",["calls"],legend=False) | {"config": {**ts_cfg("bar","tool_name",["calls"],legend=False)["config"], "yTickLabel": {"maxChar": 48}}})
 # Row 5 — open threats by severity + recent threats
-add("ag-threats-by-severity","Open threats by severity","Streaming count of open threats by severity.",pos(0,16,4,4),"chart",
-    f"SELECT severity, count() AS threats FROM ag.agentguard_threats WHERE (status = '' OR status = 'open') AND deployment_id = {DEP} GROUP BY severity{SEEK}", ts_cfg("column","severity",["threats"],legend=False))
+add("ag-threats-by-severity","Open threats by severity","Open threats by severity in the selected time range.",pos(0,16,4,4),"chart",
+    f"SELECT severity, count() AS threats FROM table(ag.agentguard_threats) WHERE (status = '' OR status = 'open') AND last_seen > now() - {TR} AND deployment_id = {DEP} GROUP BY severity", ts_cfg("column","severity",["threats"],legend=False))
 add("ag-recent-threats","Recent threats","One row per (agent, session, rule); folded by mv_threats. Streaming — new threats appear live.",pos(4,16,8,4),"chart",
     f"SELECT last_seen, severity, rule_id, rule_name, agent_id, session_id, if(status = '', 'open', status) AS status FROM ag.agentguard_threats WHERE deployment_id = {DEP} ORDER BY last_seen DESC LIMIT 25"+SEEK, tbl_cfg())
 # Row 6 — sessions + how it works

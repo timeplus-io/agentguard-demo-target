@@ -51,7 +51,7 @@
   {
    "id": "ag-kpi-sessions",
    "title": "Active sessions (window)",
-   "description": "Distinct sessions with any event in the selected window. Streaming.",
+   "description": "Distinct sessions with any event in the selected window.",
    "position": {
     "x": 0,
     "y": 1,
@@ -61,7 +61,7 @@
     "nextY": 3
    },
    "viz_type": "chart",
-   "viz_content": "SELECT count_distinct(session_id) AS sessions FROM ag.agentguard_cim_event WHERE deployment_id = '{{filter_deployment}}' SETTINGS seek_to = '-{{filter_time_range}}'",
+   "viz_content": "SELECT count_distinct(session_id) AS sessions FROM table(ag.agentguard_cim_event) WHERE event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}'",
    "viz_config": {
     "chartType": "singleValue",
     "config": {
@@ -84,7 +84,7 @@
   {
    "id": "ag-kpi-toolcalls",
    "title": "Tool calls (window)",
-   "description": "tool_invoke events in the selected window. Streaming.",
+   "description": "tool_invoke events in the selected window.",
    "position": {
     "x": 3,
     "y": 1,
@@ -94,7 +94,7 @@
     "nextY": 3
    },
    "viz_type": "chart",
-   "viz_content": "SELECT count() AS tool_calls FROM ag.agentguard_cim_event WHERE event_type = 'tool_invoke' AND deployment_id = '{{filter_deployment}}' SETTINGS seek_to = '-{{filter_time_range}}'",
+   "viz_content": "SELECT count() AS tool_calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}'",
    "viz_config": {
     "chartType": "singleValue",
     "config": {
@@ -150,7 +150,7 @@
   {
    "id": "ag-kpi-warning",
    "title": "Open warnings",
-   "description": "Warning threat rows not acknowledged or cleared. Streaming.",
+   "description": "Warning threat rows not acknowledged or cleared.",
    "position": {
     "x": 9,
     "y": 1,
@@ -160,7 +160,7 @@
     "nextY": 3
    },
    "viz_type": "chart",
-   "viz_content": "SELECT count() AS warnings FROM ag.agentguard_threats WHERE severity = 'warning' AND (status = '' OR status = 'open') AND deployment_id = '{{filter_deployment}}' SETTINGS seek_to = '-{{filter_time_range}}'",
+   "viz_content": "SELECT count() AS warnings FROM table(ag.agentguard_threats) WHERE severity = 'warning' AND (status = '' OR status = 'open') AND last_seen > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}'",
    "viz_config": {
     "chartType": "singleValue",
     "config": {
@@ -205,7 +205,7 @@
   {
    "id": "ag-threats-over-time",
    "title": "Threats over time by rule",
-   "description": "Security events per minute, stacked by rule. Streaming \u2014 new bars appear as rules fire.",
+   "description": "Security events per minute, stacked by rule.",
    "position": {
     "x": 6,
     "y": 3,
@@ -215,7 +215,7 @@
     "nextY": 8
    },
    "viz_type": "chart",
-   "viz_content": "SELECT window_start AS time, rule_name, count() AS events FROM tumble(ag.agentguard_security_events, detected_at, 1m) WHERE deployment_id = '{{filter_deployment}}' GROUP BY window_start, rule_name SETTINGS seek_to = '-{{filter_time_range}}'",
+   "viz_content": "SELECT window_start AS time, rule_name, count() AS events FROM tumble(table(ag.agentguard_security_events), detected_at, 1m) WHERE detected_at > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY window_start, rule_name ORDER BY time",
    "viz_config": {
     "chartType": "column",
     "config": {
@@ -456,7 +456,7 @@
   {
    "id": "ag-threats-by-severity",
    "title": "Open threats by severity",
-   "description": "Streaming count of open threats by severity.",
+   "description": "Open threats by severity in the selected time range.",
    "position": {
     "x": 0,
     "y": 16,
@@ -466,7 +466,7 @@
     "nextY": 20
    },
    "viz_type": "chart",
-   "viz_content": "SELECT severity, count() AS threats FROM ag.agentguard_threats WHERE (status = '' OR status = 'open') AND deployment_id = '{{filter_deployment}}' GROUP BY severity SETTINGS seek_to = '-{{filter_time_range}}'",
+   "viz_content": "SELECT severity, count() AS threats FROM table(ag.agentguard_threats) WHERE (status = '' OR status = 'open') AND last_seen > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY severity",
    "viz_config": {
     "chartType": "column",
     "config": {

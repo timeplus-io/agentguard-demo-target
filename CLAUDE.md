@@ -74,6 +74,13 @@ injection → exfiltration in one session within a `hop(1m, 10m)` window (critic
 thanks to `mv_threats` dedup) · `mv_rule_demo004` more than 40 tool calls per minute per agent (warning;
 the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATERIALIZED VIEW ag.<name>`.
 
+**`demo-001` does NOT fire on a `WebFetch` of the attacker page.** Claude Code's WebFetch runs the fetched
+page through a model and returns only a *summary*; the raw "ignore previous instructions" text never reaches
+`tool_result`, so the `LIKE` predicate misses it (verified 2026-10-07: WebFetch result paraphrases the hidden
+block). The injection text reaches `tool_result` only when the agent reads the page raw — `curl -s <url>`,
+`grep` of the page, or `Read` of a saved copy. So the Fetch beat must include a raw read (a `curl` of the
+URL) to light `demo-001`; the WebFetch still provides the chain's `probe` stage.
+
 ## Engine and Console gotchas (all hit on this stack — do not rediscover them)
 
 - Regex word boundaries inside SQL string literals need `\\b` (double backslash); single `\b` is a backspace.
@@ -96,11 +103,12 @@ the presenter's normal peak is 22/min). Pause/resume: `SYSTEM PAUSE|RESUME MATER
   table panel backfills with `SETTINGS seek_to = '-15m'`.
 - **Streaming vs historical panels.** A panel is streaming (pushes live updates, no manual refresh) when
   its SQL queries the stream directly (no `table(...)`) and backfills with `SETTINGS seek_to = '-<range>'`;
-  it is historical (snapshot) when it wraps the source in `table(...)` with a `now()` window. The demo
-  needs the detection panels live, so the KPI tiles, threats-over-time (streaming `tumble`), attack-chain,
-  open-threats-by-severity and recent-threats panels all stream. Panels that cannot stream stay historical:
-  window functions (`avg() OVER` in the baseline panel) and JOINs (the sessions table). `build_dashboard.py`
-  validates streaming panels via `/sqlanalyze` (`is_streaming` must be true) and historical ones via `/exec`.
+  it is historical (snapshot) when it wraps the source in `table(...)` with a `now()` window. **Keep at most
+  four streaming panels**: with nine the Console page blocked (2026-10-07). The four that stream are the ones
+  the runbook watches live: Open critical threats, Live tool calls, Attack chain by session, Recent threats.
+  Everything else (the other KPI tiles, threats-over-time, threats-by-severity, baseline, sessions) is
+  historical. `build_dashboard.py` validates streaming panels via `/sqlanalyze` (`is_streaming` must be true)
+  and historical ones via `/exec`.
 - The app regenerates its dashboard on upgrade: after any AgentGuard app upgrade, re-run
   `python3 demo/build_dashboard.py` (it validates every panel through `/exec` or `/sqlanalyze` and then
   `PUT`s; pass `--dry` to validate only). Verify in the Console with Playwright at 1920 px, zero console errors.
