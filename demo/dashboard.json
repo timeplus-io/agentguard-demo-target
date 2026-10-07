@@ -1,0 +1,576 @@
+{
+ "name": "AgentGuard Overview",
+ "description": "Live view of AI coding agents: tool calls, detections, attack chains and baselines. Filter by deployment (dss-demo for the DSS 2026 demo).",
+ "panels": [
+  {
+   "id": "ag-ctl-time",
+   "title": "Time Range",
+   "description": "",
+   "position": {
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 1,
+    "nextX": 6,
+    "nextY": 1
+   },
+   "viz_type": "control",
+   "viz_content": "",
+   "viz_config": {
+    "chartType": "selector",
+    "target": "filter_time_range",
+    "defaultValue": "15m",
+    "inlineValues": "5m,15m,1h,6h,24h",
+    "label": "Time Range",
+    "labelWidth": 35
+   }
+  },
+  {
+   "id": "ag-ctl-deployment",
+   "title": "Deployment",
+   "description": "",
+   "position": {
+    "x": 6,
+    "y": 0,
+    "w": 6,
+    "h": 1,
+    "nextX": 12,
+    "nextY": 1
+   },
+   "viz_type": "control",
+   "viz_content": "",
+   "viz_config": {
+    "chartType": "selector",
+    "target": "filter_deployment",
+    "defaultValue": "dss-demo",
+    "inlineValues": "dss-demo,dss-demo-dev,local",
+    "label": "Deployment",
+    "labelWidth": 35
+   }
+  },
+  {
+   "id": "ag-kpi-sessions",
+   "title": "Active sessions (5 min)",
+   "description": "Distinct sessions with any event in the last 5 minutes.",
+   "position": {
+    "x": 0,
+    "y": 1,
+    "w": 3,
+    "h": 2,
+    "nextX": 3,
+    "nextY": 3
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT count(DISTINCT session_id) AS sessions FROM table(ag.agentguard_cim_event) WHERE event_time > now() - 5m AND deployment_id = '{{filter_deployment}}'",
+   "viz_config": {
+    "chartType": "singleValue",
+    "config": {
+     "value": "sessions",
+     "sparkline": false,
+     "delta": false,
+     "unit": {
+      "value": "",
+      "position": "right"
+     },
+     "color": "#8934D9",
+     "sparklineColor": "#8934D9",
+     "increaseColor": "#D12D50",
+     "decreaseColor": "#38A169",
+     "fontSize": 44,
+     "fractionDigits": 0
+    }
+   }
+  },
+  {
+   "id": "ag-kpi-toolcalls",
+   "title": "Tool calls (window)",
+   "description": "tool_invoke events in the selected time range.",
+   "position": {
+    "x": 3,
+    "y": 1,
+    "w": 3,
+    "h": 2,
+    "nextX": 6,
+    "nextY": 3
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT count() AS tool_calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}'",
+   "viz_config": {
+    "chartType": "singleValue",
+    "config": {
+     "value": "tool_calls",
+     "sparkline": false,
+     "delta": false,
+     "unit": {
+      "value": "",
+      "position": "right"
+     },
+     "color": "#D53F8C",
+     "sparklineColor": "#D53F8C",
+     "increaseColor": "#D12D50",
+     "decreaseColor": "#38A169",
+     "fontSize": 44,
+     "fractionDigits": 0
+    }
+   }
+  },
+  {
+   "id": "ag-kpi-critical",
+   "title": "Open critical threats",
+   "description": "Threat rows with severity critical not acknowledged or cleared.",
+   "position": {
+    "x": 6,
+    "y": 1,
+    "w": 3,
+    "h": 2,
+    "nextX": 9,
+    "nextY": 3
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT count() AS critical FROM table(ag.agentguard_threats) WHERE severity = 'critical' AND (status = '' OR status = 'open') AND deployment_id = '{{filter_deployment}}'",
+   "viz_config": {
+    "chartType": "singleValue",
+    "config": {
+     "value": "critical",
+     "sparkline": false,
+     "delta": false,
+     "unit": {
+      "value": "",
+      "position": "right"
+     },
+     "color": "#D12D50",
+     "sparklineColor": "#D12D50",
+     "increaseColor": "#D12D50",
+     "decreaseColor": "#38A169",
+     "fontSize": 44,
+     "fractionDigits": 0
+    }
+   }
+  },
+  {
+   "id": "ag-kpi-warning",
+   "title": "Open warnings",
+   "description": "Threat rows with severity warning not acknowledged or cleared.",
+   "position": {
+    "x": 9,
+    "y": 1,
+    "w": 3,
+    "h": 2,
+    "nextX": 12,
+    "nextY": 3
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT count() AS warnings FROM table(ag.agentguard_threats) WHERE severity = 'warning' AND (status = '' OR status = 'open') AND deployment_id = '{{filter_deployment}}'",
+   "viz_config": {
+    "chartType": "singleValue",
+    "config": {
+     "value": "warnings",
+     "sparkline": false,
+     "delta": false,
+     "unit": {
+      "value": "",
+      "position": "right"
+     },
+     "color": "#F0BE3E",
+     "sparklineColor": "#F0BE3E",
+     "increaseColor": "#D12D50",
+     "decreaseColor": "#38A169",
+     "fontSize": 44,
+     "fractionDigits": 0
+    }
+   }
+  },
+  {
+   "id": "ag-live-toolcalls",
+   "title": "Live tool calls",
+   "description": "Streaming: every tool the agent invokes, as it happens.",
+   "position": {
+    "x": 0,
+    "y": 3,
+    "w": 6,
+    "h": 5,
+    "nextX": 6,
+    "nextY": 8
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT event_time, tool_name, substring(tool_input, 1, 120) AS input FROM ag.agentguard_cim_event WHERE event_type = 'tool_invoke' AND deployment_id = '{{filter_deployment}}' SETTINGS seek_to = '-15m'",
+   "viz_config": {
+    "chartType": "table",
+    "config": {
+     "columns": [],
+     "pageSize": 20
+    }
+   }
+  },
+  {
+   "id": "ag-threats-over-time",
+   "title": "Threats over time by rule",
+   "description": "Security events per minute, stacked by rule.",
+   "position": {
+    "x": 6,
+    "y": 3,
+    "w": 6,
+    "h": 5,
+    "nextX": 12,
+    "nextY": 8
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT window_start AS time, rule_name, count() AS events FROM tumble(table(ag.agentguard_security_events), detected_at, 1m) WHERE detected_at > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY window_start, rule_name ORDER BY time",
+   "viz_config": {
+    "chartType": "column",
+    "config": {
+     "color": "rule_name",
+     "colors": [
+      "#D53F8C",
+      "#8934D9",
+      "#D12D50",
+      "#F0BE3E",
+      "#ED64A6",
+      "#FF4A71",
+      "#F7775A",
+      "#9A1563"
+     ],
+     "dataLabel": false,
+     "fractionDigits": 0,
+     "gridlines": true,
+     "legend": true,
+     "lineStyle": "curve",
+     "points": false,
+     "showAll": false,
+     "unit": {
+      "position": "left",
+      "value": ""
+     },
+     "xAxis": "time",
+     "xFormat": "",
+     "xRange": "Infinity",
+     "xTitle": "",
+     "yAxis": [
+      "events"
+     ],
+     "yRange": {
+      "max": null,
+      "min": null
+     },
+     "yTickLabel": {
+      "maxChar": 25
+     },
+     "yTitle": "",
+     "stacked": true
+    }
+   }
+  },
+  {
+   "id": "ag-chain-status",
+   "title": "Attack chain by session",
+   "description": "probe \u2192 injection \u2192 credential access \u2192 exfiltration, per session (1 = stage observed).",
+   "position": {
+    "x": 0,
+    "y": 8,
+    "w": 6,
+    "h": 4,
+    "nextX": 6,
+    "nextY": 12
+   },
+   "viz_type": "chart",
+   "viz_content": "WITH staged AS (SELECT event_time, session_id, agent_id, multi_if(event_type = 'tool_complete' AND tool_name IN ('WebFetch','WebSearch'), 'probe', event_type = 'tool_complete' AND (lower(tool_result) LIKE '%ignore previous instructions%' OR lower(tool_result) LIKE '%ignore all previous%'), 'injection', event_type = 'tool_invoke' AND match(lower(tool_input), '(credentials|id_rsa|id_ed25519|\\\\.env\\\\b|private key)'), 'credential_access', event_type = 'tool_invoke' AND match(lower(tool_input), '\\\\bcurl\\\\b.*(--data|-d @|--upload-file)'), 'exfiltration', '') AS stage FROM table(ag.agentguard_cim_event) WHERE event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}') SELECT session_id, max(stage = 'probe') AS probe, max(stage = 'injection') AS injection, max(stage = 'credential_access') AS credential_access, max(stage = 'exfiltration') AS exfiltration, min(event_time) AS first_seen, max(event_time) AS last_seen FROM staged WHERE stage != '' GROUP BY session_id ORDER BY last_seen DESC LIMIT 20",
+   "viz_config": {
+    "chartType": "table",
+    "config": {
+     "columns": [],
+     "pageSize": 20
+    }
+   }
+  },
+  {
+   "id": "ag-rate-baseline",
+   "title": "Tool-call rate vs trailing baseline",
+   "description": "Calls per minute against the trailing mean and mean + 3\u03c3 of the previous hour.",
+   "position": {
+    "x": 6,
+    "y": 8,
+    "w": 6,
+    "h": 4,
+    "nextX": 12,
+    "nextY": 12
+   },
+   "viz_type": "chart",
+   "viz_content": "WITH per_min AS (SELECT to_start_of_minute(event_time) AS m, count() AS calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY m ORDER BY m), raw AS (SELECT m AS time, calls, avg(calls) OVER (ORDER BY m ROWS BETWEEN 60 PRECEDING AND 1 PRECEDING) AS base, stddev_pop(calls) OVER (ORDER BY m ROWS BETWEEN 60 PRECEDING AND 1 PRECEDING) AS sd FROM per_min), banded AS (SELECT time, to_float64(calls) AS calls_v, if_not_finite(base, to_float64(calls)) AS baseline, if_not_finite(sd, 0.0) AS sd FROM raw) SELECT time, 'calls' AS series, calls_v AS value FROM banded UNION ALL SELECT time, 'baseline' AS series, round(baseline, 1) AS value FROM banded UNION ALL SELECT time, 'upper (mean + 3\u03c3)' AS series, round(baseline + 3 * sd, 1) AS value FROM banded ORDER BY time, series",
+   "viz_config": {
+    "chartType": "line",
+    "config": {
+     "color": "series",
+     "colors": [
+      "#D53F8C",
+      "#8934D9",
+      "#D12D50",
+      "#F0BE3E",
+      "#ED64A6",
+      "#FF4A71",
+      "#F7775A",
+      "#9A1563"
+     ],
+     "dataLabel": false,
+     "fractionDigits": 0,
+     "gridlines": true,
+     "legend": true,
+     "lineStyle": "curve",
+     "points": false,
+     "showAll": false,
+     "unit": {
+      "position": "left",
+      "value": ""
+     },
+     "xAxis": "time",
+     "xFormat": "",
+     "xRange": "Infinity",
+     "xTitle": "",
+     "yAxis": [
+      "value"
+     ],
+     "yRange": {
+      "max": null,
+      "min": null
+     },
+     "yTickLabel": {
+      "maxChar": 25
+     },
+     "yTitle": ""
+    }
+   }
+  },
+  {
+   "id": "ag-events-per-minute",
+   "title": "Events per minute by agent type",
+   "description": "Normalized CIM events per minute.",
+   "position": {
+    "x": 0,
+    "y": 12,
+    "w": 7,
+    "h": 4,
+    "nextX": 7,
+    "nextY": 16
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT window_start AS time, agent_type, count() AS events FROM tumble(table(ag.agentguard_cim_event), event_time, 1m) WHERE event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY window_start, agent_type ORDER BY time",
+   "viz_config": {
+    "chartType": "line",
+    "config": {
+     "color": "agent_type",
+     "colors": [
+      "#D53F8C",
+      "#8934D9",
+      "#D12D50",
+      "#F0BE3E",
+      "#ED64A6",
+      "#FF4A71",
+      "#F7775A",
+      "#9A1563"
+     ],
+     "dataLabel": false,
+     "fractionDigits": 0,
+     "gridlines": true,
+     "legend": true,
+     "lineStyle": "curve",
+     "points": false,
+     "showAll": false,
+     "unit": {
+      "position": "left",
+      "value": ""
+     },
+     "xAxis": "time",
+     "xFormat": "",
+     "xRange": "Infinity",
+     "xTitle": "",
+     "yAxis": [
+      "events"
+     ],
+     "yRange": {
+      "max": null,
+      "min": null
+     },
+     "yTickLabel": {
+      "maxChar": 25
+     },
+     "yTitle": ""
+    }
+   }
+  },
+  {
+   "id": "ag-top-tools",
+   "title": "Top tools",
+   "description": "Most invoked tools in the selected time range.",
+   "position": {
+    "x": 7,
+    "y": 12,
+    "w": 5,
+    "h": 4,
+    "nextX": 12,
+    "nextY": 16
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT tool_name, count() AS calls FROM table(ag.agentguard_cim_event) WHERE event_type = 'tool_invoke' AND event_time > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' GROUP BY tool_name ORDER BY calls DESC LIMIT 10",
+   "viz_config": {
+    "chartType": "bar",
+    "config": {
+     "color": "",
+     "colors": [
+      "#D53F8C",
+      "#8934D9",
+      "#D12D50",
+      "#F0BE3E",
+      "#ED64A6",
+      "#FF4A71",
+      "#F7775A",
+      "#9A1563"
+     ],
+     "dataLabel": false,
+     "fractionDigits": 0,
+     "gridlines": true,
+     "legend": false,
+     "lineStyle": "curve",
+     "points": false,
+     "showAll": false,
+     "unit": {
+      "position": "left",
+      "value": ""
+     },
+     "xAxis": "tool_name",
+     "xFormat": "",
+     "xRange": "Infinity",
+     "xTitle": "",
+     "yAxis": [
+      "calls"
+     ],
+     "yRange": {
+      "max": null,
+      "min": null
+     },
+     "yTickLabel": {
+      "maxChar": 48
+     },
+     "yTitle": ""
+    }
+   }
+  },
+  {
+   "id": "ag-threats-by-severity",
+   "title": "Open threats by severity",
+   "description": "",
+   "position": {
+    "x": 0,
+    "y": 16,
+    "w": 4,
+    "h": 4,
+    "nextX": 4,
+    "nextY": 20
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT severity, count() AS threats FROM table(ag.agentguard_threats) WHERE (status = '' OR status = 'open') AND deployment_id = '{{filter_deployment}}' GROUP BY severity ORDER BY severity",
+   "viz_config": {
+    "chartType": "column",
+    "config": {
+     "color": "",
+     "colors": [
+      "#D53F8C",
+      "#8934D9",
+      "#D12D50",
+      "#F0BE3E",
+      "#ED64A6",
+      "#FF4A71",
+      "#F7775A",
+      "#9A1563"
+     ],
+     "dataLabel": false,
+     "fractionDigits": 0,
+     "gridlines": true,
+     "legend": false,
+     "lineStyle": "curve",
+     "points": false,
+     "showAll": false,
+     "unit": {
+      "position": "left",
+      "value": ""
+     },
+     "xAxis": "severity",
+     "xFormat": "",
+     "xRange": "Infinity",
+     "xTitle": "",
+     "yAxis": [
+      "threats"
+     ],
+     "yRange": {
+      "max": null,
+      "min": null
+     },
+     "yTickLabel": {
+      "maxChar": 25
+     },
+     "yTitle": ""
+    }
+   }
+  },
+  {
+   "id": "ag-recent-threats",
+   "title": "Recent threats",
+   "description": "One row per (agent, session, rule); folded by mv_threats.",
+   "position": {
+    "x": 4,
+    "y": 16,
+    "w": 8,
+    "h": 4,
+    "nextX": 12,
+    "nextY": 20
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT last_seen, severity, rule_id, rule_name, agent_id, session_id, if(status = '', 'open', status) AS status FROM table(ag.agentguard_threats) WHERE last_seen > now() - {{filter_time_range}} AND deployment_id = '{{filter_deployment}}' ORDER BY last_seen DESC LIMIT 25",
+   "viz_config": {
+    "chartType": "table",
+    "config": {
+     "columns": [],
+     "pageSize": 20
+    }
+   }
+  },
+  {
+   "id": "ag-sessions",
+   "title": "Sessions",
+   "description": "Per session: first/last event, tool calls, threats.",
+   "position": {
+    "x": 0,
+    "y": 20,
+    "w": 8,
+    "h": 4,
+    "nextX": 8,
+    "nextY": 24
+   },
+   "viz_type": "chart",
+   "viz_content": "SELECT e.session_id AS session_id, any(e.agent_id) AS agent_id, min(e.event_time) AS first_seen, max(e.event_time) AS last_seen, count_if(e.event_type = 'tool_invoke') AS tool_calls, any(t.threats) AS threats FROM table(ag.agentguard_cim_event) AS e LEFT JOIN (SELECT session_id, count() AS threats FROM table(ag.agentguard_threats) GROUP BY session_id) AS t ON e.session_id = t.session_id WHERE e.event_time > now() - {{filter_time_range}} AND e.deployment_id = '{{filter_deployment}}' GROUP BY e.session_id ORDER BY last_seen DESC LIMIT 20",
+   "viz_config": {
+    "chartType": "table",
+    "config": {
+     "columns": [],
+     "pageSize": 20
+    }
+   }
+  },
+  {
+   "id": "ag-how",
+   "title": "How this works",
+   "description": "",
+   "position": {
+    "x": 8,
+    "y": 20,
+    "w": 4,
+    "h": 4,
+    "nextX": 12,
+    "nextY": 24
+   },
+   "viz_type": "markdown",
+   "viz_content": "",
+   "viz_config": {
+    "mdString": "**Claude Code hooks \u2192 `ag.agentguard_hook_events` \u2192 CIM normalizer MVs \u2192 `ag.agentguard_cim_event` \u2192 rule MVs (`mv_rule_*`) \u2192 `ag.agentguard_security_events` \u2192 `mv_threats` \u2192 `ag.agentguard_threats`**\n\nEvery rule is a `CREATE MATERIALIZED VIEW \u2026 AS SELECT \u2026 WHERE \u2026`. Pause one with `SYSTEM PAUSE MATERIALIZED VIEW ag.mv_rule_rp002`.\n\nDemo rules: `demo-001` indirect prompt injection in tool results \u00b7 `demo-003` outbound data transfer \u00b7 `demo-chain` probe \u2192 injection \u2192 exfiltration in a 10-minute session window \u00b7 `demo-004` tool-call burst.\n\nApp: github.com/timeplus-io/apps/tree/main/apps/agentguard"
+   }
+  }
+ ]
+}

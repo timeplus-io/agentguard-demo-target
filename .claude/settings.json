@@ -1,0 +1,7 @@
+{
+  "env": {
+    "AGENTGUARD_AGENT_ID": "dss-demo-claude",
+    "AGENTGUARD_DEPLOYMENT_ID": "dss-demo-dev",
+    "AGENTGUARD_DEPLOYMENT_NAME": "DSS 2026 Demo (dev sessions)"
+  }
+}
