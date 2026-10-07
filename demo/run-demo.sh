@@ -10,12 +10,18 @@ LOCAL=".claude/settings.local.json"
 cat > "$LOCAL" <<'JSON'
 { "env": { "AGENTGUARD_AGENT_ID": "dss-demo-claude", "AGENTGUARD_DEPLOYMENT_ID": "dss-demo", "AGENTGUARD_DEPLOYMENT_NAME": "DSS 2026 Demo" } }
 JSON
-trap 'rm -f "$LOCAL"' EXIT
 export HOME="$PWD/sandbox-home"
+trap 'rm -f "$LOCAL" "$HOME/Library/Keychains"' EXIT
 mkdir -p "$HOME/.claude"
 # Reuse the presenter's Claude Code auth and global settings (the AgentGuard hooks live in ~/.claude/settings.json).
 for f in settings.json .credentials.json; do
   [ -e "$REAL_HOME/.claude/$f" ] && [ ! -e "$HOME/.claude/$f" ] && ln -sf "$REAL_HOME/.claude/$f" "$HOME/.claude/$f"
 done
+# macOS keeps the Claude Code OAuth token in the login keychain, which is looked up under $HOME/Library/Keychains.
+# Without this link Claude Code cannot see or save its login ("Couldn't save your login ... keychain is locked").
+if [ -d "$REAL_HOME/Library/Keychains" ]; then
+  mkdir -p "$HOME/Library"
+  ln -sfn "$REAL_HOME/Library/Keychains" "$HOME/Library/Keychains"
+fi
 echo "HOME=$HOME  deployment=dss-demo  stack=https://release.demo.timeplus.com"
 claude "$@"
