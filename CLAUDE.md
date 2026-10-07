@@ -33,6 +33,7 @@ demo/RUNBOOK.md                # the ≈5-minute stage script (7 beats) — the 
 demo/sql/0*.sql                # the four demo detection rules (materialized views), as created on the stack
 demo/build_dashboard.py        # generates + validates + PUTs the "AgentGuard Overview" dashboard
 demo/dashboard.json            # last published dashboard body; dashboard.backup.json = the shipped app version
+demo/reset_data.py             # clears demo threats (dss-demo/dss-demo-dev only) for a clean rerun; keeps the rules
 demo/cleanup.sql               # removes every demo object from the stack
 docs/dss2026-agentguard-e2e-demo-design.md      # demo design, decisions, engine/Console gotchas (read first)
 docs/dss2026-machine-speed-defense-slide-brief.md # the spec for generating the slide deck (22 slides)

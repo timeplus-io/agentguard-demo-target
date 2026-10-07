@@ -88,7 +88,20 @@ exfiltration chain today? Chart threats per rule."*
   (`SYSTEM RESUME MATERIALIZED VIEW ag.<name>`).
 - **Dashboard panels empty or broken:** re-run `python3 demo/build_dashboard.py`.
 
-## 5. Clean up after the conference
+## 5. Reset between rehearsals
+
+To rerun from a clean slate without removing the rules:
+
+```bash
+python3 demo/reset_data.py        # clears demo threats for dss-demo and dss-demo-dev
+```
+
+It hard-deletes the persistent threat rows for the demo deployments only (never `local` or `prod`) and
+leaves the rule materialized views running. The event streams are append-only and cannot be row-deleted;
+they age out of the 15-minute dashboard window on their own, so just let the previous run fall out or start
+the next run and its fresh events take over.
+
+## 5b. Clean up after the conference
 
 Run `demo/cleanup.sql` on the stack to drop the demo views and rows, or decide to keep the rules.
 To restore the shipped dashboard, publish `demo/dashboard.backup.json` to the same dashboard id.
